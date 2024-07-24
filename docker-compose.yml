@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ollama-server
+    ports:
+      - "8000:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=http://0.0.0.0:11434
+    restart: always
+
+  flask-app:
+    build:
+      context: ollama_app
+      dockerfile: Dockerfile
+    container_name: flask-app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_URL=http://ollama-server:11434
+    restart: always
+
+volumes:
+  ollama_data:
