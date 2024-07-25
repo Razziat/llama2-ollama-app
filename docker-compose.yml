@@ -10,6 +10,7 @@ services:
       - "8000:11434"
     volumes:
       - ollama_data:/root/.ollama
+      - ./Modelfile:/opt/ollama/Modelfile
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=http://0.0.0.0:11434

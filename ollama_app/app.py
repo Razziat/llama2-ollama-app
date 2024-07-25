@@ -22,14 +22,16 @@ def create_assistant():
     logging.info(f"Creating assistant with type: {assistant_type}")
 
     model_file_content = f"""
-    model tinyllama
+    model mistral
     type {assistant_type}
     """
-    with open('Modelfile', 'w') as f:
+    model_file_path = '/root/.ollama/Modelfile'
+    os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
+    with open(model_file_path, 'w') as f:
         f.write(model_file_content)
 
     logging.info("Sending request to pull model...")
-    response = requests.post(f"{OLLAMA_URL}/api/pull", json={'model': 'tinyllama'})
+    response = requests.post(f"{OLLAMA_URL}/api/pull", json={'model': 'mistral'})
 
     if response.status_code == 200:
         logging.info("Model pull request successful, redirecting to loading page.")
@@ -48,7 +50,7 @@ def check_status():
     while retries > 0:
         try:
             logging.info("Checking model status...")
-            response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': 'tinyllama', 'prompt': ''})
+            response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': 'mistral', 'prompt': ''})
             if response.status_code == 200:
                 logging.info("Model is ready, redirecting to assistant page.")
                 return redirect(url_for('assistant'))
@@ -68,7 +70,7 @@ def query():
     user_input = request.form['user_input']
     logging.info(f"Received user input: {user_input}")
 
-    response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': 'tinyllama', 'prompt': user_input}, stream=True)
+    response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': 'mistral', 'prompt': user_input}, stream=True)
 
     try:
         full_response = ""

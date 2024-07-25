@@ -5,14 +5,14 @@ FROM ubuntu:20.04
 # Install dependencies
 RUN apt-get update && apt-get install -y python3 python3-pip wget curl
 
-# Install Ollama
-RUN curl -fsSL https://ollama.com/install.sh | sh
+# Create a directory for Ollama
+RUN mkdir -p /opt/ollama/bin
 
-# Copy the Ollama files
-COPY ollama /opt/ollama
+# Copy the Ollama binary
+COPY ollama /opt/ollama/bin/ollama
 
 # Make the binary executable
-RUN chmod +x /opt/ollama/ollama
+RUN chmod +x /opt/ollama/bin/ollama
 
 # Copy the setup script
 COPY setup.sh /opt/ollama/setup.sh
