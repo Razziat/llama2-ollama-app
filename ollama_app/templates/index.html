@@ -1,15 +1,19 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Create Assistant</title>
-  </head>
-  <body>
-    <h1>Create a new Assistant</h1>
-    <form action="/create_assistant" method="post">
-      <label for="assistant_type">Assistant Type:</label>
-      <input type="text" id="assistant_type" name="assistant_type">
-      <button type="submit">Create</button>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Interface</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Welcome to the Chat Interface</h1>
+    <form action="{{ url_for('create_chat') }}" method="post">
+        <label for="model">Choose a model:</label>
+        <select id="model" name="model">
+            <option value="llama2">Llama2</option>
+            <option value="mistral">Mistral</option>
+            <!-- Add more models as needed -->
+        </select>
+        <button type="submit">Start Chat</button>
     </form>
-  </body>
+</body>
 </html>

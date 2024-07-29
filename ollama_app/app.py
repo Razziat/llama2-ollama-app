@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, jsonify
+from flask import Flask, request, render_template, redirect, url_for, jsonify, session
 import requests
 import os
 import json
@@ -6,6 +6,7 @@ import time
 import logging
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 
 OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://ollama-server:11434')
 
@@ -16,61 +17,32 @@ logging.basicConfig(level=logging.INFO)
 def index():
     return render_template('index.html')
 
-@app.route('/create_assistant', methods=['POST'])
-def create_assistant():
-    assistant_type = request.form['assistant_type']
-    logging.info(f"Creating assistant with type: {assistant_type}")
+@app.route('/create_chat', methods=['POST'])
+def create_chat():
+    session['chat_history'] = []
+    session['model'] = request.form['model']
+    return redirect(url_for('chat'))
 
-    model_file_content = f"""
-    model mistral
-    type {assistant_type}
-    """
-    model_file_path = '/root/.ollama/Modelfile'
-    os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
-    with open(model_file_path, 'w') as f:
-        f.write(model_file_content)
-
-    logging.info("Sending request to pull model...")
-    response = requests.post(f"{OLLAMA_URL}/api/pull", json={'model': 'mistral'})
-
-    if response.status_code == 200:
-        logging.info("Model pull request successful, redirecting to loading page.")
-        return redirect(url_for('loading'))
-    else:
-        logging.error(f"Error pulling model: {response.text}")
-        return f"Error pulling model: {response.text}", 500
-
-@app.route('/loading')
-def loading():
-    return render_template('loading.html')
-
-@app.route('/check_status')
-def check_status():
-    retries = 20
-    while retries > 0:
-        try:
-            logging.info("Checking model status...")
-            response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': 'mistral', 'prompt': ''})
-            if response.status_code == 200:
-                logging.info("Model is ready, redirecting to assistant page.")
-                return redirect(url_for('assistant'))
-        except requests.exceptions.ConnectionError as e:
-            logging.warning(f"Connection error: {e}, retries left: {retries}")
-            retries -= 1
-            time.sleep(15)
-    logging.error("Failed to connect to Ollama server after multiple retries.")
-    return jsonify({'status': 'loading'})
-
-@app.route('/assistant')
-def assistant():
-    return render_template('assistant.html')
+@app.route('/chat')
+def chat():
+    model = session.get('model', 'default_model')
+    chat_history = session.get('chat_history', [])
+    return render_template('chat.html', model=model, chat_history=chat_history)
 
 @app.route('/query', methods=['POST'])
 def query():
     user_input = request.form['user_input']
+    model = session.get('model', 'default_model')
+
+    chat_history = session.get('chat_history', [])
+    chat_history.append({'role': 'user', 'content': user_input})
+    
     logging.info(f"Received user input: {user_input}")
 
-    response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': 'mistral', 'prompt': user_input}, stream=True)
+    # Add previous context to the prompt
+    prompt = "\n".join([f"{entry['role']}: {entry['content']}" for entry in chat_history])
+    
+    response = requests.post(f"{OLLAMA_URL}/api/generate", json={'model': model, 'prompt': prompt}, stream=True)
 
     try:
         full_response = ""
@@ -78,8 +50,12 @@ def query():
             if line:
                 res_json = json.loads(line.decode('utf-8'))
                 full_response += res_json.get('response', '')
+        
+        chat_history.append({'role': 'assistant', 'content': full_response})
+        session['chat_history'] = chat_history
+
         logging.info("Successfully received response from model.")
-        return render_template('assistant.html', response=full_response)
+        return render_template('chat.html', model=model, chat_history=chat_history)
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON: {e}")
         return f"Error: {response.text}", 500
